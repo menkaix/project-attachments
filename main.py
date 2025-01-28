@@ -5,6 +5,7 @@ from flask_cors import CORS
 import os
 from services.file_service import serve_file
 from services.google_cloud_storage_service import upload_file_to_gcs  # Import the upload function
+from services.google_cloud_storage_service import list_blobs_with_prefix
 
 app = Flask(__name__, static_folder='./resources')  # Specify static folder  (important!)
 CORS(app)
@@ -35,6 +36,18 @@ def upload_file():
     upload_file_to_gcs(bucket_name, file.stream, destination_blob_name)
 
     return 'File successfully uploaded', 200
+
+@app.route('/list_files', methods=['GET'])
+def find_files():
+    bucket_name = request.args.get('bucket_name')
+    prefix = request.args.get('prefix')
+    regex_pattern = request.args.get('regex_pattern', '.*')  # Set default to wildcard
+
+    if not bucket_name or not prefix:
+        return 'Missing required parameters', 400
+
+    matching_blobs = list_blobs_with_prefix(bucket_name, prefix, regex_pattern)
+    return {'files': matching_blobs}
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=os.environ.get('FLASK_PORT', 5000), debug=os.environ.get('FLASK_DEBUG', True))
